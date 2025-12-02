@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Signature Pad - SignFlow</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background-color: #f1f5f9;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            padding: 1rem;
+        }
+
+        .pad-container {
+            background: white;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            overflow: hidden;
+            border: 1px solid #e2e8f0;
+        }
+
+        .header {
+            padding: 1rem;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .canvas-wrapper {
+            flex: 1;
+            position: relative;
+            background: #fff;
+            cursor: crosshair;
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .actions {
+            padding: 1rem;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            gap: 1rem;
+            background: #f8fafc;
+        }
+
+        .btn {
+            flex: 1;
+            justify-content: center;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="pad-container">
+        <div class="header">
+            <h3>External Signature Pad</h3>
+        </div>
+        <div class="canvas-wrapper">
+            <canvas id="signature-pad"></canvas>
+        </div>
+        <div class="actions">
+            <button id="clear-btn" class="btn btn-outline">Clear</button>
+            <button id="add-btn" class="btn btn-primary">
+                <i class="fa-solid fa-plus"></i> Add to Document
+            </button>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
+    <script>
+        const canvas = document.getElementById('signature-pad');
+        const clearBtn = document.getElementById('clear-btn');
+        const addBtn = document.getElementById('add-btn');
+
+        // Init Pad
+        function resizeCanvas() {
+            const ratio = Math.max(window.devicePixelRatio || 1, 1);
+            canvas.width = canvas.offsetWidth * ratio;
+            canvas.height = canvas.offsetHeight * ratio;
+            canvas.getContext("2d").scale(ratio, ratio);
+            if (signaturePad) signaturePad.clear(); // Clear on resize for now
+        }
+
+        const signaturePad = new SignaturePad(canvas, {
+            backgroundColor: 'rgba(255, 255, 255, 0)'
+        });
+
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // Actions
+        clearBtn.addEventListener('click', () => signaturePad.clear());
+
+        addBtn.addEventListener('click', () => {
+            if (signaturePad.isEmpty()) {
+                alert('Please sign first.');
+                return;
+            }
+            const dataURL = signaturePad.toDataURL('image/png');
+
+            // Send to opener
+            if (window.opener && !window.opener.closed) {
+                window.opener.postMessage({
+                    type: 'ADD_SIGNATURE',
+                    data: dataURL
+                }, '*');
+
+                // Close window after adding
+                window.close();
+            } else {
+                alert('Main document window not found.');
+            }
+        });
+    </script>
+</body>
+
+</html>

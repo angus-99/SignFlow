@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SignFlow - Digital Signature Tool</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <header class="top-bar">
+            <div class="logo">
+                <div class="logo-icon">
+                    <i class="fa-solid fa-file-signature"></i>
+                </div>
+                <h1>SignFlow</h1>
+            </div>
+            <div class="actions">
+                <label for="pdf-upload" class="btn btn-secondary">
+                    <i class="fa-solid fa-upload"></i> Upload PDF
+                </label>
+                <input type="file" id="pdf-upload" accept="application/pdf" hidden>
+                <button id="save-pdf-btn" class="btn btn-primary" disabled>
+                    <i class="fa-solid fa-download"></i> Save PDF
+                </button>
+            </div>
+        </header>
+
+        <main class="workspace">
+            <div class="pdf-area">
+                <div id="pdf-wrapper" class="pdf-wrapper">
+                    <!-- PDF Pages will be rendered here -->
+                </div>
+            </div>
+
+            <aside class="tools-panel">
+                <div class="tool-card" id="signature-card">
+                    <div class="card-header">
+                        <div class="header-title">
+                            <h3>New Signature</h3>
+                        </div>
+                        <button id="pop-out-btn" class="btn-icon" title="Pop out signature pad">
+                            <i class="fa-solid fa-expand"></i>
+                        </button>
+                    </div>
+                    <div class="canvas-container">
+                        <canvas id="signature-pad"></canvas>
+                        <div class="canvas-overlay">
+                            <i class="fa-solid fa-pen-nib"></i>
+                            <span>Sign here</span>
+                        </div>
+                    </div>
+                    <div class="card-actions">
+                        <button id="clear-sig-btn" class="btn btn-outline">Clear</button>
+                        <button id="add-sig-btn" class="btn btn-primary">
+                            <i class="fa-solid fa-plus"></i> Add to Document
+                        </button>
+                    </div>
+                </div>
+
+                <div class="instructions">
+                    <h4>How to use:</h4>
+                    <ol>
+                        <li>Upload a PDF document</li>
+                        <li>Draw your signature in the box</li>
+                        <li>Click "Add to Document"</li>
+                        <li>Drag the signature to position it</li>
+                        <li>Click "Save PDF" to download</li>
+                    </ol>
+                </div>
+            </aside>
+        </main>
+        <footer class="app-footer">
+            <p>Designed by Angus</p>
+        </footer>
+    </div>
+
+
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
+    <script src="script.js"></script>
+</body>
+
+</html>
