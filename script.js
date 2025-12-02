@@ -240,10 +240,11 @@ async function addSignatureToLastPage(dataURL) {
     sigContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
-// Simple Drag Logic
+// Simple Drag Logic with Cross-Page Support
 function makeDraggable(element) {
     let isDragging = false;
     let startX, startY, initialLeft, initialTop;
+    let currentParent = element.parentElement;
 
     element.addEventListener('mousedown', dragStart);
     // Touch support
@@ -263,6 +264,7 @@ function makeDraggable(element) {
 
         initialLeft = element.offsetLeft;
         initialTop = element.offsetTop;
+        currentParent = element.parentElement;
 
         if (e.type === 'touchstart') {
             document.addEventListener('touchmove', drag, { passive: false });
@@ -286,10 +288,32 @@ function makeDraggable(element) {
         let newLeft = initialLeft + dx;
         let newTop = initialTop + dy;
 
-        // Boundary checks
-        const parent = element.parentElement;
-        const maxLeft = parent.offsetWidth - element.offsetWidth;
-        const maxTop = parent.offsetHeight - element.offsetHeight;
+        // Check if dragging over a different page
+        const elementAtPoint = document.elementFromPoint(clientX, clientY);
+        const targetPage = elementAtPoint?.closest('.pdf-page-container');
+
+        if (targetPage && targetPage !== currentParent) {
+            // Moving to a different page
+            currentParent = targetPage;
+            element.parentElement.removeChild(element);
+            targetPage.appendChild(element);
+
+            // Reset position relative to new parent
+            const targetRect = targetPage.getBoundingClientRect();
+            const parentRect = currentParent.getBoundingClientRect();
+            
+            initialLeft = clientX - targetRect.left - element.offsetWidth / 2;
+            initialTop = clientY - targetRect.top - element.offsetHeight / 2;
+            startX = clientX;
+            startY = clientY;
+
+            newLeft = initialLeft;
+            newTop = initialTop;
+        }
+
+        // Boundary checks relative to current parent
+        const maxLeft = currentParent.offsetWidth - element.offsetWidth;
+        const maxTop = currentParent.offsetHeight - element.offsetHeight;
 
         newLeft = Math.max(0, Math.min(newLeft, maxLeft));
         newTop = Math.max(0, Math.min(newTop, maxTop));
@@ -403,3 +427,4 @@ function downloadBlob(data, fileName, mimeType) {
 
 // Init
 initSignaturePad();
+
