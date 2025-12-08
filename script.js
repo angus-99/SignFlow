@@ -48,7 +48,7 @@ function initSignaturePad() {
     // Listen for messages from popup
     window.addEventListener('message', (event) => {
         if (event.data && event.data.type === 'ADD_SIGNATURE') {
-            addSignatureToLastPage(event.data.data);
+            addSignatureWithKeywordSearch(event.data.data);
         }
     });
 }
@@ -141,19 +141,76 @@ addSigBtn.addEventListener('click', async () => {
     }
 
     const dataURL = signaturePad.toDataURL('image/png');
-    await addSignatureToLastPage(dataURL);
+    await addSignatureWithKeywordSearch(dataURL);
 });
 
-// Add Signature to Last Page with Auto-positioning
-async function addSignatureToLastPage(dataURL) {
+// Add Signature with Keyword Search - searches all pages for keywords, falls back to click placement
+async function addSignatureWithKeywordSearch(dataURL) {
     if (!pdfDoc) {
         alert('Please upload a PDF first.');
         return;
     }
 
-    const pageIndex = pdfDoc.numPages - 1; // Last page (0-based)
+    const signatureKeywords = ['Signature', 'Signed', 'Sign Here', 'Employee Signature', 'Learner Signature'];
+    let foundPageIndex = null;
+    let foundItem = null;
+    let foundViewport = null;
+
+    // Search all pages for keywords
+    try {
+        for (let i = 1; i <= pdfDoc.numPages; i++) {
+            const page = await pdfDoc.getPage(i);
+            const textContent = await page.getTextContent();
+
+            for (const item of textContent.items) {
+                const text = item.str.toLowerCase();
+                if (signatureKeywords.some(keyword => text.includes(keyword.toLowerCase()))) {
+                    foundPageIndex = i - 1; // 0-based
+                    foundItem = item;
+                    foundViewport = page.getViewport({ scale });
+                    break;
+                }
+            }
+            if (foundItem) break; // Stop searching once found
+        }
+    } catch (e) {
+        console.warn('Keyword search failed:', e);
+    }
+
+    // If keyword found, add signature to that page
+    if (foundItem && foundPageIndex !== null) {
+        await addSignatureToPage(dataURL, foundPageIndex, foundItem, foundViewport);
+    } else {
+        // Fallback: prompt user to click on page
+        alert('No signature keywords found. Please click on the page where you want to add the signature.');
+        
+        // Temporarily add click listeners to pages
+        const pages = document.querySelectorAll('.pdf-page-container');
+        const clickHandler = async (e) => {
+            const pageContainer = e.currentTarget;
+            const pageIndex = parseInt(pageContainer.dataset.pageIndex);
+            const clickX = e.offsetX;
+            const clickY = e.offsetY;
+
+            // Remove all click listeners
+            pages.forEach(p => p.removeEventListener('click', clickHandler));
+
+            await addSignatureToPage(dataURL, pageIndex, null, null, clickX, clickY);
+        };
+
+        pages.forEach(p => p.addEventListener('click', clickHandler));
+    }
+}
+
+// Add Signature to Specific Page
+async function addSignatureToPage(dataURL, pageIndex, foundItem, foundViewport, clickX, clickY) {
+    if (!pdfDoc) {
+        alert('Please upload a PDF first.');
+        return;
+    }
+
     const page = await pdfDoc.getPage(pageIndex + 1); // getPage is 1-based
-    const viewport = page.getViewport({ scale });
+    const viewport = foundViewport || page.getViewport({ scale });
 
     // Find the page container in DOM
     const pages = document.querySelectorAll('.pdf-page-container');
@@ -164,48 +221,23 @@ async function addSignatureToLastPage(dataURL) {
         return;
     }
 
-    // Default position (center-ish bottom if no keyword found)
-    let x = 50;
-    let y = viewport.height - 200;
+    // Initialize position
+    let x, y;
 
-    // Try to find "Signature" keyword
-    try {
-        const textContent = await page.getTextContent();
-        const signatureKeywords = ['Signature', 'Signed', 'Sign Here', 'Employee Signature', 'Learner Signature'];
+    // If keyword was found, use its position
+    if (foundItem) {
+        const tx = foundItem.transform[4];
+        const ty = foundItem.transform[5];
+        const [vx, vy] = viewport.convertToViewportPoint(tx, ty);
+        const itemWidth = foundItem.width || 0;
+        const scaledWidth = itemWidth * scale;
 
-        let foundItem = null;
-
-        // Simple search
-        for (const item of textContent.items) {
-            const text = item.str.toLowerCase();
-            if (signatureKeywords.some(keyword => text.includes(keyword.toLowerCase()))) {
-                foundItem = item;
-                break; // Stop at first match
-            }
-        }
-
-        if (foundItem) {
-            // item.transform is [scaleX, skewY, skewX, scaleY, tx, ty]
-            // PDF coordinates: origin is bottom-left
-            const tx = foundItem.transform[4];
-            const ty = foundItem.transform[5];
-
-            // Convert to Viewport (DOM) coordinates
-            // viewport.convertToViewportPoint(x, y) returns [x, y] in canvas coords (top-left origin)
-            const [vx, vy] = viewport.convertToViewportPoint(tx, ty);
-
-            // Position signature to the right of the text
-            // vy is the baseline of the text roughly
-            // Shift x by the text width + padding
-            const itemWidth = foundItem.width || 0;
-            // Scale width to viewport
-            const scaledWidth = itemWidth * scale;
-
-            x = vx + scaledWidth + 20; // 20px padding
-            y = vy - 40; // Move up slightly to align with baseline (approx)
-        }
-    } catch (e) {
-        console.warn('Auto-positioning failed:', e);
+        x = vx + scaledWidth + 20; // 20px padding
+        y = vy - 40; // Move up slightly to align with baseline
+    } else {
+        // Use clicked position
+        x = clickX;
+        y = clickY;
     }
 
     // Create DOM Element
@@ -427,4 +459,3 @@ function downloadBlob(data, fileName, mimeType) {
 
 // Init
 initSignaturePad();
-
