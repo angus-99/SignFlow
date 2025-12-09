@@ -764,7 +764,9 @@ canvas#signature-pad {
 
 /* Footer */
 .app-footer {
-    text-align: center;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     padding: 1rem;
     background: #f8fafc;
     border-top: 1px solid var(--border);
@@ -779,4 +781,5 @@ canvas#signature-pad {
 
 .app-footer a:hover {
     text-decoration: underline;
+
 }
